@@ -1,0 +1,25 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins-server
+    restart: always
+    user: root
+    environment:
+      # Limit JVM memory usage so Jenkins doesn't overwhelm a small server
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    ports:
+      - "8099:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # Mount the host's Docker socket so Jenkins can run "docker build" / "docker push"
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins-net
+
+networks:
+  jenkins-net:
+    driver: bridge
+
+volumes:
+  jenkins_home:
