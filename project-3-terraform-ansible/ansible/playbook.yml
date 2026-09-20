@@ -1,0 +1,63 @@
+---
+- name: Configure server and deploy containerized app
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update all packages
+      dnf:
+        name: "*"
+        state: latest
+
+    - name: Install Docker and Git
+      dnf:
+        name:
+          - docker
+          - git
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add ec2-user to the docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: true
+
+    - name: Create Docker CLI plugins directory
+      file:
+        path: /usr/local/lib/docker/cli-plugins
+        state: directory
+        mode: "0755"
+
+    - name: Install Docker Compose plugin
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.29.0/docker-compose-linux-x86_64
+        dest: /usr/local/lib/docker/cli-plugins/docker-compose
+        mode: "0755"
+
+    - name: Clone the application repository
+      git:
+        repo: "https://github.com/faizan11n/RESUME-PROJECTS.git"
+        dest: /home/ec2-user/RESUME-PROJECTS
+        version: main
+        force: true
+
+    - name: Deploy the application with Docker Compose
+      command: docker compose up -d --build
+      args:
+        chdir: /home/ec2-user/RESUME-PROJECTS/project-1-cicd-pipeline
+
+    - name: Wait for the app to respond
+      uri:
+        url: "http://localhost:8089"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 10
+      delay: 6
